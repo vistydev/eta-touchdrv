@@ -101,29 +101,30 @@ static void cancel_urb(device_context * device) {
 static ssize_t optical_read(struct file * filp, char * buffer, size_t count, loff_t * ppos) {
   ssize_t r;
   device_context * device;
+  unsigned char local_buffer[sizeof(device -> buffer)];
 
   device = filp -> private_data;
   if (device == NULL) {
     return -EFAULT;
   }
 
+  /* copy_to_user can sleep, so it must not run under the spinlock */
   spin_lock_irq( & device -> lock);
-  do {
-    if (device -> buffer_length <= 0) {
-      r = 0;
-      break;
-    }
-    if (count > device -> buffer_length) {
-      count = device -> buffer_length;
-    }
-    device -> buffer_length = 0;
-    if (copy_to_user(buffer, device -> buffer, count) != 0) {
-      r = -EFAULT;
-      break;
-    }
-    r = count;
-  } while (false);
+  if (device -> buffer_length <= 0) {
+    spin_unlock_irq( & device -> lock);
+    return 0;
+  }
+  if (count > device -> buffer_length) {
+    count = device -> buffer_length;
+  }
+  memcpy(local_buffer, device -> buffer, count);
+  device -> buffer_length = 0;
   spin_unlock_irq( & device -> lock);
+
+  if (copy_to_user(buffer, local_buffer, count) != 0) {
+    return -EFAULT;
+  }
+  r = count;
 
   return r;
 }
