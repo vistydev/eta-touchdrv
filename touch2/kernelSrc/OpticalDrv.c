@@ -117,7 +117,7 @@ static ssize_t optical_read(struct file * filp, char * buffer, size_t count, lof
       count = device -> buffer_length;
     }
     device -> buffer_length = 0;
-    if (raw_copy_to_user(buffer, device -> buffer, count) != 0) {
+    if (copy_to_user(buffer, device -> buffer, count) != 0) {
       r = -EFAULT;
       break;
     }
@@ -150,7 +150,7 @@ static long set_report(device_context * device, unsigned short length, void
     return -ENOMEM;
   }
   do {
-    r = raw_copy_from_user(kernel_data, data, length);
+    r = copy_from_user(kernel_data, data, length);
     if (r != 0) {
       break;
     }
@@ -178,7 +178,7 @@ static long get_report(device_context * device, unsigned short length, void * da
     }
     r = usb_control_msg(device -> usb_device, usb_rcvctrlpipe(device -> usb_device, 0), 0, 0xc0, 0, 0, kernel_data, length, 1000);
     if (r >= 0) {
-      if (raw_copy_to_user(data, kernel_data, r) != 0) {
+      if (copy_to_user(data, kernel_data, r) != 0) {
         break;
       }
     }
@@ -201,7 +201,7 @@ static long sync_singletouch(device_context * device, unsigned short length, voi
   if (length < sizeof(value)) {
     return 0;
   }
-  r = raw_copy_from_user( & value, data, sizeof(value));
+  r = copy_from_user( & value, data, sizeof(value));
   if (r != 0) {
     return 0;
   }
@@ -230,7 +230,7 @@ static long sync_multitouch(device_context * device, unsigned short length, void
   if (length < sizeof(value)) {
     return 0;
   }
-  r = raw_copy_from_user( & value, data, sizeof(value));
+  r = copy_from_user( & value, data, sizeof(value));
   if (r != 0) {
     return 0;
   }
